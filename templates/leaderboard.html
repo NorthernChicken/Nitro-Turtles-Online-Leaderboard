@@ -22,7 +22,6 @@
             flex-direction: column;
         }
 
-        /* Controls / Navigation */
         .controls {
             background-color: #34495e;
             padding: 15px;
@@ -65,7 +64,6 @@
             letter-spacing: 2px;
         }
         
-        /* Table Styles */
         .table-wrapper {
             flex: 1;
             overflow-y: auto;
@@ -244,12 +242,11 @@
 </div>
 
 <script>
-    // Spam protection: Track last reload time
+    // Spam prot
     let lastReloadTime = 0;
-    const MIN_RELOAD_INTERVAL = 2000; // Minimum 2 seconds between reloads
+    const MIN_RELOAD_INTERVAL = 2000;
     let isReloading = false;
     
-    // Show more entries functionality
     let visibleCount = 20;
     const entriesPerPage = 20;
     
@@ -258,46 +255,41 @@
         const totalEntries = allRows.length;
         const nextBatch = Math.min(visibleCount + entriesPerPage, totalEntries);
         
-        // Show next batch
         for (let i = visibleCount; i < nextBatch; i++) {
             allRows[i].classList.add('visible');
         }
         
         visibleCount = nextBatch;
         
-        // Hide button if all entries are shown
         if (visibleCount >= totalEntries) {
             document.getElementById('show-more-container').style.display = 'none';
         }
     }
     
-    // Prevent rapid reloads
     function safeReload() {
         const now = Date.now();
         if (isReloading) {
-            return; // Already reloading
+            return;
         }
         if (now - lastReloadTime < MIN_RELOAD_INTERVAL) {
-            return; // Too soon, ignore
+            return;
         }
         lastReloadTime = now;
         isReloading = true;
         window.location.reload();
     }
     
-    // Auto-refresh when loading
     {% if entries|length == 0 and not error %}
     (function() {
-        const maxAttempts = 30; // Try for up to 30 seconds (30 attempts * 1 second)
+        const maxAttempts = 30;
         let attempts = 0;
         const currentCourse = '{{ current_course }}';
         const currentMode = '{{ current_mode }}';
         let lastApiCheck = 0;
-        const MIN_API_CHECK_INTERVAL = 1500; // Minimum 1.5 seconds between API checks
+        const MIN_API_CHECK_INTERVAL = 1500; // 1.5 seconds between API checks
         
         function checkApi() {
             const now = Date.now();
-            // Throttle API checks
             if (now - lastApiCheck < MIN_API_CHECK_INTERVAL) {
                 setTimeout(checkApi, MIN_API_CHECK_INTERVAL - (now - lastApiCheck));
                 return;
@@ -315,10 +307,9 @@
                 })
                 .then(data => {
                     if (data.entries && data.entries.length > 0) {
-                        // Reload the page to get Steam profile data (with spam protection)
                         safeReload();
                     } else if (attempts < maxAttempts) {
-                        setTimeout(checkApi, 1500); // Increased delay between checks
+                        setTimeout(checkApi, 1500);
                     } else {
                         document.getElementById('loading-message').textContent = 
                             'Loading timed out. Please refresh manually.';
@@ -326,7 +317,7 @@
                 })
                 .catch(error => {
                     if (attempts < maxAttempts) {
-                        setTimeout(checkApi, 1500); // Increased delay between checks
+                        setTimeout(checkApi, 1500);
                     } else {
                         document.getElementById('loading-message').textContent = 
                             'Unable to connect to API. Please ensure it is running.';
@@ -334,12 +325,11 @@
                 });
         }
         
-        // Start checking after a short delay
         setTimeout(checkApi, 1500);
     })();
     {% endif %}
     
-    // Prevent manual refresh spam (F5, Ctrl+R, etc.)
+    // Prevent manual refresh spam
     window.addEventListener('beforeunload', function() {
         const now = Date.now();
         if (now - lastReloadTime < MIN_RELOAD_INTERVAL) {

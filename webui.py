@@ -6,16 +6,13 @@ from collections import defaultdict
 
 app = Flask(__name__)
 
-# Spam protection: Rate limiting
+# config
 request_times = defaultdict(list)
-RATE_LIMIT_WINDOW = 10  # seconds
-MAX_REQUESTS_PER_WINDOW = 10  # max requests per window
-
-# CONFIGURATION - Use environment variables with fallbacks
+RATE_LIMIT_WINDOW = 10
+MAX_REQUESTS_PER_WINDOW = 10
 BASE_API_URL = os.getenv('BASE_API_URL', 'http://127.0.0.1:8000/leaderboard')
-STEAM_API_KEY = os.getenv('STEAM_API_KEY', '03D7E6EB408D8DAC5C7FF55C79CA86C4')
+STEAM_API_KEY = os.getenv('STEAM_API_KEY', 'api')
 
-# MAPPING: API Name -> Display Name
 COURSE_DISPLAY_NAMES = {
     'beach': 'Nitro Turtles Circuit',
     'reef': 'Rainbow Reef'
@@ -51,17 +48,14 @@ def check_rate_limit():
     client_ip = request.remote_addr
     now = time()
     
-    # Clean old entries outside the window
     request_times[client_ip] = [
         req_time for req_time in request_times[client_ip]
         if now - req_time < RATE_LIMIT_WINDOW
     ]
     
-    # Check if limit exceeded
     if len(request_times[client_ip]) >= MAX_REQUESTS_PER_WINDOW:
         return False
     
-    # Record this request
     request_times[client_ip].append(now)
     return True
 
@@ -79,7 +73,7 @@ def index():
     course = request.args.get('course', 'beach')
     mode = request.args.get('mode', 'race')
 
-    # Get the fancy display name, fallback to Title Case if not found
+    # display name is different from api name
     display_name = COURSE_DISPLAY_NAMES.get(course, course.title())
 
     endpoint_suffix = course + ("lap" if mode == 'lap' else "")
@@ -115,11 +109,10 @@ def index():
 
     return render_template('leaderboard.html', 
                            entries=processed_entries, 
-                           current_course=course,           # Used for logic/links
-                           course_display_name=display_name, # Used for text display
+                           current_course=course,
+                           course_display_name=display_name,
                            current_mode=mode,
                            error=error_msg)
 
 if __name__ == '__main__':
-    # For local development only
     app.run(debug=True, host='0.0.0.0', port=5003)
