@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ course_display_name }} Leaderboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1b1b1b;
+            color: #ecf0f1;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            min-height: 100vh;
+            background-color: #2c3e50;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Controls / Navigation */
+        .controls {
+            background-color: #34495e;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #2c3e50;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            padding: 8px 16px;
+            background-color: #1b1b1b;
+            color: #bdc3c7;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+        .btn:hover {
+            background-color: #465f79;
+            color: #fff;
+        }
+        .btn.active {
+            background-color: #f1c40f;
+            color: #2c3e50;
+        }
+        
+        .header-title {
+            text-align: center;
+            background-color: #2980b9;
+            margin: 0;
+            padding: 15px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        /* Table Styles */
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #34495e; }
+        th { background-color: #253646; color: #bdc3c7; font-size: 0.85em; text-transform: uppercase; }
+        tr:hover { background-color: #34495e; }
+        
+        .rank-col { width: 60px; text-align: center; font-weight: bold; opacity: 0.7; }
+        .score-col { width: 150px; text-align: right; font-family: monospace; font-size: 1.1em; color: #f1c40f; }
+        .player-cell { display: flex; align-items: center; gap: 10px; }
+        
+        .avatar {
+            width: 32px; height: 32px; border-radius: 4px; background-color: #000;
+        }
+        a.profile-link { color: inherit; text-decoration: none; font-weight: 500; }
+        a.profile-link:hover { text-decoration: underline; color: #fff; }
+        
+        .error { padding: 20px; text-align: center; color: #e74c3c; background: #fadbd8; }
+        
+        .loading-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: #bdc3c7;
+            font-size: 1.1em;
+        }
+        
+        .entry-row {
+            display: none;
+        }
+        .entry-row.visible {
+            display: table-row;
+        }
+        
+        .show-more-container {
+            text-align: center;
+            padding: 20px;
+            background-color: #34495e;
+            border-top: 1px solid #2c3e50;
+        }
+        .show-more-btn {
+            padding: 12px 24px;
+            background-color: #2980b9;
+            color: #ecf0f1;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+        .show-more-btn:hover {
+            background-color: #3498db;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        .show-more-btn:active {
+            transform: translateY(0);
+        }
+        
+        .footer {
+            background-color: #1b1b1b;
+            padding: 20px;
+            text-align: center;
+            border-top: 1px solid #34495e;
+            color: #bdc3c7;
+            font-size: 0.9em;
+        }
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+            color: #5dade2;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="controls">
+        <div class="btn-group">
+            <span style="align-self:center; margin-right:5px; font-weight:bold; opacity:0.5;">MAP:</span>
+            <a href="/?course=beach&mode={{ current_mode }}" 
+               class="btn {{ 'active' if current_course == 'beach' }}">Nitro Turtles Circuit</a>
+            <a href="/?course=reef&mode={{ current_mode }}" 
+               class="btn {{ 'active' if current_course == 'reef' }}">Rainbow Reef</a>
+        </div>
+
+        <div class="btn-group">
+            <span style="align-self:center; margin-right:5px; font-weight:bold; opacity:0.5;">TYPE:</span>
+            <a href="/?course={{ current_course }}&mode=race" 
+               class="btn {{ 'active' if current_mode == 'race' }}">Overall</a>
+            <a href="/?course={{ current_course }}&mode=lap" 
+               class="btn {{ 'active' if current_mode == 'lap' }}">Lap</a>
+        </div>
+    </div>
+
+    <h1 class="header-title">
+        {{ course_display_name }} - {{ "Lap" if current_mode == 'lap' else "Overall" }}
+    </h1>
+
+    {% if error %}
+        <div class="error">
+            <strong>Error:</strong> {{ error }} <br>
+            <small>Need Help? Open an issue on <a href="https://github.com/NorthernChicken/Nitro-Turtles-Online-Leaderboard/issues" target="_blank">GitHub</a></small>
+        </div>
+    {% elif entries|length == 0 %}
+        <div class="loading-message" id="loading-message">
+            Loading... Please wait
+        </div>
+    {% else %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th class="rank-col">Rank</th>
+                        <th>Player</th>
+                        <th class="score-col">Time</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboard-body">
+                    {% for entry in entries %}
+                    <tr class="entry-row {% if loop.index <= 20 %}visible{% endif %}" data-index="{{ loop.index0 }}">
+                        <td class="rank-col">#{{ entry.rank }}</td>
+                        <td>
+                            <div class="player-cell">
+                                {% if entry.avatar %}
+                                    <img src="{{ entry.avatar }}" class="avatar" alt="Avatar">
+                                {% else %}
+                                    <div class="avatar" style="background: #555;"></div>
+                                {% endif %}
+                                
+                                <a href="{{ entry.profile_url }}" class="profile-link" target="_blank">
+                                    {{ entry.username }}
+                                </a>
+                            </div>
+                        </td>
+                        <td class="score-col">{{ entry.score_formatted }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% if entries|length > 20 %}
+        <div class="show-more-container" id="show-more-container">
+            <button class="show-more-btn" id="show-more-btn" onclick="showMoreEntries()">
+                Show More
+            </button>
+        </div>
+        {% endif %}
+    {% endif %}
+    
+    <div class="footer">
+        <div>
+            Made by <a href="https://github.com/NorthernChicken" target="_blank">NorthernChicken</a>
+        </div>
+        <div style="margin-top: 10px;">
+            <a href="https://store.steampowered.com/app/3952070/Nitro_Turtles/" target="_blank">
+                Wishlist Nitro Turtles on Steam
+            </a>
+            <span style="margin: 0 5px;">|</span>
+            <a href="https://discord.gg/tGyspuvBnP" target="_blank">
+                Join Discord
+            </a>
+            <span style="margin: 0 5px;">|</span>
+            <a href="https://github.com/NorthernChicken/Nitro-Turtles-Online-Leaderboard" target="_blank">
+                GitHub Repository
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Spam protection: Track last reload time
+    let lastReloadTime = 0;
+    const MIN_RELOAD_INTERVAL = 2000; // Minimum 2 seconds between reloads
+    let isReloading = false;
+    
+    // Show more entries functionality
+    let visibleCount = 20;
+    const entriesPerPage = 20;
+    
+    function showMoreEntries() {
+        const allRows = document.querySelectorAll('.entry-row');
+        const totalEntries = allRows.length;
+        const nextBatch = Math.min(visibleCount + entriesPerPage, totalEntries);
+        
+        // Show next batch
+        for (let i = visibleCount; i < nextBatch; i++) {
+            allRows[i].classList.add('visible');
+        }
+        
+        visibleCount = nextBatch;
+        
+        // Hide button if all entries are shown
+        if (visibleCount >= totalEntries) {
+            document.getElementById('show-more-container').style.display = 'none';
+        }
+    }
+    
+    // Prevent rapid reloads
+    function safeReload() {
+        const now = Date.now();
+        if (isReloading) {
+            return; // Already reloading
+        }
+        if (now - lastReloadTime < MIN_RELOAD_INTERVAL) {
+            return; // Too soon, ignore
+        }
+        lastReloadTime = now;
+        isReloading = true;
+        window.location.reload();
+    }
+    
+    // Auto-refresh when loading
+    {% if entries|length == 0 and not error %}
+    (function() {
+        const maxAttempts = 30; // Try for up to 30 seconds (30 attempts * 1 second)
+        let attempts = 0;
+        const currentCourse = '{{ current_course }}';
+        const currentMode = '{{ current_mode }}';
+        let lastApiCheck = 0;
+        const MIN_API_CHECK_INTERVAL = 1500; // Minimum 1.5 seconds between API checks
+        
+        function checkApi() {
+            const now = Date.now();
+            // Throttle API checks
+            if (now - lastApiCheck < MIN_API_CHECK_INTERVAL) {
+                setTimeout(checkApi, MIN_API_CHECK_INTERVAL - (now - lastApiCheck));
+                return;
+            }
+            lastApiCheck = now;
+            
+            attempts++;
+            const endpointSuffix = currentCourse + (currentMode === 'lap' ? 'lap' : '');
+            fetch(`http://127.0.0.1:8000/leaderboard/${endpointSuffix}`)
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('API not ready');
+                })
+                .then(data => {
+                    if (data.entries && data.entries.length > 0) {
+                        // Reload the page to get Steam profile data (with spam protection)
+                        safeReload();
+                    } else if (attempts < maxAttempts) {
+                        setTimeout(checkApi, 1500); // Increased delay between checks
+                    } else {
+                        document.getElementById('loading-message').textContent = 
+                            'Loading timed out. Please refresh manually.';
+                    }
+                })
+                .catch(error => {
+                    if (attempts < maxAttempts) {
+                        setTimeout(checkApi, 1500); // Increased delay between checks
+                    } else {
+                        document.getElementById('loading-message').textContent = 
+                            'Unable to connect to API. Please ensure it is running.';
+                    }
+                });
+        }
+        
+        // Start checking after a short delay
+        setTimeout(checkApi, 1500);
+    })();
+    {% endif %}
+    
+    // Prevent manual refresh spam (F5, Ctrl+R, etc.)
+    window.addEventListener('beforeunload', function() {
+        const now = Date.now();
+        if (now - lastReloadTime < MIN_RELOAD_INTERVAL) {
+            // Too soon, but we can't prevent navigation, just track it
+            lastReloadTime = now;
+        }
+    });
+</script>
+
+</body>
+</html>

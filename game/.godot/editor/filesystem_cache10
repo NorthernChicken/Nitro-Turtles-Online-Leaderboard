@@ -1,0 +1,17 @@
+ea4bc82a6ad023ab7ee23ee620429895
+::res://::1768180897
+export_presets.cfg::TextFile::-1::1768179644::0::1::::<><><>0<>0<><>::
+icon.svg::CompressedTexture2D::8543256282439208148::1768172073::1768180899::1::::<><><>0<>0<>4fd40eedf2195d65c131699e50ca4bb0<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
+leaderboard_http_service.gd::GDScript::6674286853829168199::1768179081::0::1::::LeaderboardHTTPService<>Node<><>0<>0<><>::
+leaderboard_service.tscn::PackedScene::7433483070852566403::1768179100::0::1::::<><><>0<>0<><>::uid://c2dcr8635fwt8::::res://leaderboard_http_service.gd
+steam_appid.txt::TextFile::-1::1768168609::0::1::::<><><>0<>0<><>::
+::res://addons/::1768179074
+::res://addons/godotsteam/::1768179074
+godotsteam.gdextension::GDExtension::4960131034736945839::1768179074::0::1::::<><><>0<>0<><>::
+license.md::TextFile::-1::1768179074::0::1::::<><><>0<>0<><>::
+readme.md::TextFile::-1::1768179074::0::1::::<><><>0<>0<><>::
+::res://addons/godotsteam/linux32/::1768179074
+::res://addons/godotsteam/linux64/::1768179074
+::res://addons/godotsteam/osx/::1768179074
+::res://addons/godotsteam/win32/::1768179074
+::res://addons/godotsteam/win64/::1768179074

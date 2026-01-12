@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dd53m6oxmwsop"]
+
+[ext_resource type="Script" uid="uid://c2dcr8635fwt8" path="res://leaderboard_http_service.gd" id="1_m7f4b"]
+
+[node name="LeaderboardService" type="Node"]
+script = ExtResource("1_m7f4b")
