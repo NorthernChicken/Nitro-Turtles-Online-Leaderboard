@@ -1,0 +1,15 @@
+GDRE Tools v2.2.0
+Fedora Linux 43 (KDE Plasma Desktop Edition), NVIDIA GeForce RTX 3070, vulkan
+Opening file: /mnt/steamgames/SteamLibrary/steamapps/common/Nitro Turtles/nitro_turtles.pck
+Loaded 5440 imported files
+Detected Engine Version: 4.6.1
+Detected Bytecode Revision: 4.5.0-stable (ebc36a7)
+Verified 11166 files, no errors detected!
+Extracted 11166 files, no errors detected!
+Recreating plugin configs...
+Found matching plugin in cache: discord-rpc-gd, version: 1.3.1, download url: https://github.com/vaporvee/discord-rpc-godot/releases/download/1.3.1/ADDON-Discord-RPC-Godot.zip
+Found matching plugin in cache: terrain_3d, version: v1.0.1, download url: https://github.com/TokisanGames/Terrain3D/releases/download/v1.0.1/Terrain3D_v1.0.1.zip
+
+Exporting scenes...
+WARNING: Dependency res://modules/shell_attachment/shell_attachments/seaweed/seaweed.tres:res://.godot/exported/856468303/export-2711c45aa10e03476d4dbbf1d64f8a2c-seaweed_fast.res is not mapped to the same path: res://modules/shell_attachment/shell_attachments/seaweed/seaweed.tres (uid://d4a75fsa473rs)
+   at: _load_deps (modules/gdsdecomp/exporters/scene_exporter.cpp:962)

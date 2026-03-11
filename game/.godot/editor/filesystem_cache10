@@ -1,0 +1,13 @@
+ea4bc82a6ad023ab7ee23ee620429895
+::res://::1773259272
+api_server.gd::GDScript::1039239114260261567::1773259189::0::1::::<>Node<><>0<>0<><>::
+api_server.tscn::PackedScene::5242038804649326713::1773259114::0::1::::<><><>0<>0<><>::res://api_server.gd
+gdre_export.log::TextFile::-1::1773209698::0::1::::<><><>0<>0<><>::
+::res://addons/::1773259070
+::res://addons/godotsteam/::1773209699
+godotsteam.gdextension::GDExtension::6558474361951006100::1773209676::0::1::::<><><>0<>0<><>::
+::res://addons/godotsteam/linux64/::1773209688
+::res://modules/::1773259163
+::res://modules/manager/::1773259163
+::res://modules/manager/steam/::1773209699
+steam_manager.gd::GDScript::3617444444597799047::1773209683::0::1::::<>Node<><>0<>0<><>::
