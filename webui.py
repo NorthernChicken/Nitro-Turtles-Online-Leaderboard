@@ -128,12 +128,6 @@ def index():
             'profile_url': profile.get('profileurl', '#')
         })
 
-    api_base_url = BASE_API_URL
-    if api_base_url.endswith('/leaderboard'):
-        api_base_url = api_base_url[:-12]
-    elif api_base_url.endswith('/leaderboard/'):
-        api_base_url = api_base_url[:-13]
-    
     return render_template('leaderboard.html', 
                            entries=processed_entries, 
                            current_course=course,
@@ -141,8 +135,16 @@ def index():
                            current_mode=mode,
                            error=error_msg,
                            api_loading=api_loading,
-                           api_base_url=api_base_url,
                            courses=COURSE_DISPLAY_NAMES)
+
+@app.route('/api/leaderboard/<course>/<mode>')
+def api_leaderboard(course, mode):
+    target_url = f"{BASE_API_URL}/{course}/{mode}"
+    try:
+        response = requests.get(target_url, timeout=10)
+        return response.json(), response.status_code
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5003)

@@ -3,19 +3,12 @@ extends Node
 var server: TCPServer
 var port: int = 8080
 
-# State management for clients
-# client_id -> { "client": StreamPeerTCP, "buffer": "" }
 var active_clients: Dictionary = {}
 
-# Handle mapping
-# leaderboard_handle -> client_id
 var handle_to_client: Dictionary = {}
 
-# Queue for findLeaderboard calls
-# Each entry: { "id": String, "client_id": String }
 var find_queue: Array = []
 
-# Available maps
 var AVAILABLE_MAPS = [
 	"beach", "bay", "volcano", "pits", "reef", "tide", "ruins", "cliffs", "craters"
 ]
@@ -42,25 +35,21 @@ func _process(_delta):
 			}
 			print("New client connected: ", client_id)
 
-	# Process active clients
 	var to_remove = []
 	for client_id in active_clients:
 		var data = active_clients[client_id]
 		var client = data["client"]
 		
-		# Check if disconnected
 		if client.get_status() != StreamPeerTCP.STATUS_CONNECTED:
 			to_remove.append(client_id)
 			continue
 			
-		# Read data
 		var available = client.get_available_bytes()
 		if available > 0:
 			var bytes = client.get_data(available)
 			if bytes[0] == OK:
 				data["buffer"] += bytes[1].get_string_from_utf8()
 				
-				# Check if request is complete
 				if "\r\n\r\n" in data["buffer"] or "\n\n" in data["buffer"]:
 					_process_request(client_id)
 	
@@ -81,7 +70,6 @@ func _process_request(client_id: String):
 	
 	if path.begins_with("/leaderboard/"):
 		var parts = path.split("/")
-		# path format: /leaderboard/<map> (parts size 3) or /leaderboard/<map>/<type> (parts size 4)
 		if parts.size() == 3 or (parts.size() == 4 and parts[3] == ""):
 			var map_name = parts[2]
 			if map_name in AVAILABLE_MAPS:
@@ -107,7 +95,7 @@ func _process_request(client_id: String):
 				return
 				
 			if type == "lap" and map_name == "volcano":
-				_send_error(client_id, 400, "Volcano map does not have a lap leaderboard.")
+				_send_error(client_id, 400, "Scorched Shell Volcano does not have laps.")
 				return
 				
 			if type != "lap" and type != "total":
@@ -115,7 +103,7 @@ func _process_request(client_id: String):
 				return
 				
 			var leaderboard_id = map_name
-			# Special case: craters on Steam is 'crater'
+			# craters on steam is crater
 			if map_name == "craters":
 				leaderboard_id = "crater"
 				

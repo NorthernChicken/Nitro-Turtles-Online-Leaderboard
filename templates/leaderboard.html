@@ -397,8 +397,8 @@
 
             function checkApi() {
                 attempts++;
-                // frontend: 5003, godot: 8080
-                const apiUrl = '{{ api_base_url }}/leaderboard/{{ current_course }}/{{ current_mode }}';
+                // Flask proxy endpoint instead of direct api access
+                const apiUrl = '/api/leaderboard/{{ current_course }}/{{ current_mode }}';
 
                 fetch(apiUrl)
                     .then(response => {
