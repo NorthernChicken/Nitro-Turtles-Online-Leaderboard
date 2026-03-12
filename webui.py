@@ -156,25 +156,16 @@ def index():
 
     # Fetch from cache
     processed_entries = []
-    last_updated = None
     try:
         conn = sqlite3.connect('cache.db')
         c = conn.cursor()
-        c.execute("SELECT data_json, last_updated FROM leaderboard_cache WHERE map=? AND mode=?", (course, mode))
+        c.execute("SELECT data_json FROM leaderboard_cache WHERE map=? AND mode=?", (course, mode))
         row = c.fetchone()
         conn.close()
         if row:
             processed_entries = json.loads(row[0])
-            last_updated = row[1]
     except Exception as e:
         print(f"Error reading cache: {e}")
-
-    last_updated_str = ""
-    if last_updated:
-        diff = int(now_time() - last_updated)
-        if diff < 10: last_updated_str = "Just now"
-        elif diff < 60: last_updated_str = f"{diff}s ago"
-        else: last_updated_str = f"{diff // 60}m ago"
 
     return render_template('leaderboard.html', 
                            entries=processed_entries, 
@@ -182,7 +173,6 @@ def index():
                            course_display_name=display_name,
                            current_mode=mode,
                            api_loading=(len(processed_entries) == 0),
-                           last_updated=last_updated_str,
                            courses=COURSE_DISPLAY_NAMES)
 
 @app.route('/api/leaderboard/<course>/<mode>')
