@@ -1,7 +1,11 @@
 import os
 import requests
+import sqlite3
+import json
+import threading
+import time
 from flask import Flask, render_template, request
-from time import time
+from time import time as now_time
 from collections import defaultdict
 
 app = Flask(__name__)
@@ -25,6 +29,17 @@ COURSE_DISPLAY_NAMES = {
     'craters': 'Cracked Shell Craters'
 }
 
+def init_db():
+    conn = sqlite3.connect('cache.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS leaderboard_cache 
+                 (map TEXT, mode TEXT, data_json TEXT, last_updated REAL,
+                  PRIMARY KEY (map, mode))''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
 def format_score(milliseconds):
     if milliseconds is None: return "N/A"
     seconds = milliseconds // 1000
@@ -34,7 +49,7 @@ def format_score(milliseconds):
     return f"{minutes:02}:{seconds:02}.{ms:03}"
 
 def get_steam_profiles(steam_ids):
-    if not steam_ids or not STEAM_API_KEY:
+    if not steam_ids or not STEAM_API_KEY or STEAM_API_KEY == 'key':
         return {}
     clean_ids = list(set([str(sid) for sid in steam_ids if sid]))
     if not clean_ids:
@@ -49,6 +64,62 @@ def get_steam_profiles(steam_ids):
     except Exception as e:
         print(f"Error fetching Steam profiles: {e}")
         return {}
+
+def fetch_and_cache_all():
+    """Background task to refresh all leaderboards"""
+    for course_id in COURSE_DISPLAY_NAMES:
+        for mode in ['total', 'lap']:
+            if course_id == 'volcano' and mode == 'lap': continue
+            
+            try:
+                # Only update if older than 30s
+                conn = sqlite3.connect('cache.db')
+                c = conn.cursor()
+                c.execute("SELECT last_updated FROM leaderboard_cache WHERE map=? AND mode=?", (course_id, mode))
+                row = c.fetchone()
+                if row and now_time() - row[0] < 30:
+                    conn.close()
+                    continue
+                
+                target_url = f"{BASE_API_URL}/{course_id}/{mode}"
+                lb_response = requests.get(target_url, timeout=10)
+                if lb_response.status_code == 200:
+                    lb_data = lb_response.json()
+                    if lb_data.get('status') == 'loading':
+                        conn.close()
+                        continue
+                    
+                    entries = lb_data.get('entries', [])
+                    steam_ids = [str(e['steam_id']) for e in entries if e.get('steam_id')]
+                    steam_profiles = get_steam_profiles(steam_ids)
+                    
+                    processed_entries = []
+                    for entry in entries:
+                        sid = str(entry.get('steam_id'))
+                        profile = steam_profiles.get(sid, {})
+                        processed_entries.append({
+                            'rank': entry.get('place'),
+                            'score_formatted': format_score(entry.get('time', 0)),
+                            'username': profile.get('personaname', entry.get('name', 'Unknown')),
+                            'avatar': profile.get('avatar', ''), 
+                            'profile_url': profile.get('profileurl', '#')
+                        })
+                    
+                    c.execute("INSERT OR REPLACE INTO leaderboard_cache (map, mode, data_json, last_updated) VALUES (?, ?, ?, ?)",
+                             (course_id, mode, json.dumps(processed_entries), now_time()))
+                    conn.commit()
+                conn.close()
+            except Exception as e:
+                print(f"Background update failed for {course_id}/{mode}: {e}")
+
+def background_worker():
+    time.sleep(5) # Allow everything to start
+    while True:
+        fetch_and_cache_all()
+        time.sleep(10)
+
+# Start background thread
+threading.Thread(target=background_worker, daemon=True).start()
 
 def check_rate_limit():
     """Check if client has exceeded rate limit"""
@@ -69,80 +140,62 @@ def check_rate_limit():
 @app.route('/')
 def index():
     if not check_rate_limit():
-        return render_template('leaderboard.html',
-                             entries=[],
-                             current_course=request.args.get('course', 'beach'),
-                             course_display_name='Rate Limited',
-                             current_mode=request.args.get('mode', 'total'),
-                             error='Too many requests. Please wait a moment before refreshing.')
+        return render_template('leaderboard.html', entries=[], current_course='beach', 
+                             course_display_name='Rate Limited', current_mode='total', 
+                             error='Too many requests. Please wait a moment.', courses=COURSE_DISPLAY_NAMES)
     
     course = request.args.get('course', 'beach')
-    # old ui: race
     mode = request.args.get('mode', 'total')
-    if mode == 'race': mode = 'total' # old links
-
+    if mode == 'race': mode = 'total'
     display_name = COURSE_DISPLAY_NAMES.get(course, course.title())
 
-    # volcano has no laps
     if course == 'volcano' and mode == 'lap':
-        return render_template('leaderboard.html',
-                             entries=[],
-                             current_course=course,
-                             course_display_name=display_name,
-                             current_mode=mode,
-                             error='The Volcano course does not have a lap leaderboard.',
-                             courses=COURSE_DISPLAY_NAMES)
+        return render_template('leaderboard.html', entries=[], current_course=course,
+                             course_display_name=display_name, current_mode=mode,
+                             error='The Volcano course does not have a lap leaderboard.', courses=COURSE_DISPLAY_NAMES)
 
-    target_url = f"{BASE_API_URL}/{course}/{mode}"
-
-    entries = []
-    error_msg = None
-    api_loading = False
-
-    try:
-        lb_response = requests.get(target_url, timeout=10)
-        if lb_response.status_code == 200:
-            lb_data = lb_response.json()
-            if lb_data.get('status') == 'loading':
-                api_loading = True
-                entries = []
-            else:
-                entries = lb_data.get('entries', [])
-        else:
-            error_msg = f"API Error ({lb_response.status_code}): {lb_response.text}"
-    except Exception as e:
-        error_msg = f"Connection Error: {e}"
-
-    steam_ids = [str(e['steam_id']) for e in entries if e.get('steam_id')]
-    steam_profiles = get_steam_profiles(steam_ids)
-
+    # Fetch from cache
     processed_entries = []
-    for entry in entries:
-        sid = str(entry.get('steam_id'))
-        profile = steam_profiles.get(sid, {})
-        processed_entries.append({
-            'rank': entry.get('place'),
-            'score_formatted': format_score(entry.get('time', 0)),
-            'username': profile.get('personaname', entry.get('name', 'Unknown')),
-            'avatar': profile.get('avatar', ''), 
-            'profile_url': profile.get('profileurl', '#')
-        })
+    last_updated = None
+    try:
+        conn = sqlite3.connect('cache.db')
+        c = conn.cursor()
+        c.execute("SELECT data_json, last_updated FROM leaderboard_cache WHERE map=? AND mode=?", (course, mode))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            processed_entries = json.loads(row[0])
+            last_updated = row[1]
+    except Exception as e:
+        print(f"Error reading cache: {e}")
+
+    last_updated_str = ""
+    if last_updated:
+        diff = int(now_time() - last_updated)
+        if diff < 10: last_updated_str = "Just now"
+        elif diff < 60: last_updated_str = f"{diff}s ago"
+        else: last_updated_str = f"{diff // 60}m ago"
 
     return render_template('leaderboard.html', 
                            entries=processed_entries, 
                            current_course=course,
                            course_display_name=display_name,
                            current_mode=mode,
-                           error=error_msg,
-                           api_loading=api_loading,
+                           api_loading=(len(processed_entries) == 0),
+                           last_updated=last_updated_str,
                            courses=COURSE_DISPLAY_NAMES)
 
 @app.route('/api/leaderboard/<course>/<mode>')
 def api_leaderboard(course, mode):
-    target_url = f"{BASE_API_URL}/{course}/{mode}"
     try:
-        response = requests.get(target_url, timeout=10)
-        return response.json(), response.status_code
+        conn = sqlite3.connect('cache.db')
+        c = conn.cursor()
+        c.execute("SELECT data_json FROM leaderboard_cache WHERE map=? AND mode=?", (course, mode))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            return {"entries": json.loads(row[0])}, 200
+        return {"entries": [], "status": "loading"}, 200
     except Exception as e:
         return {"error": str(e)}, 500
 

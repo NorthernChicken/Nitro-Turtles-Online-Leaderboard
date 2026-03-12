@@ -303,6 +303,12 @@
 
         <h1 class="header-title">
             {{ course_display_name }} - {{ "Lap" if current_mode == 'lap' else "Overall" }}
+            {% if last_updated %}
+            <span
+                style="display: block; font-size: 0.4em; opacity: 0.6; margin-top: 5px; text-transform: none; letter-spacing: normal;">
+                Updated: {{ last_updated }}
+            </span>
+            {% endif %}
         </h1>
 
         {% if error %}
