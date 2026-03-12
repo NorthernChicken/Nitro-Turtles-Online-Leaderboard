@@ -124,7 +124,7 @@ threading.Thread(target=background_worker, daemon=True).start()
 def check_rate_limit():
     """Check if client has exceeded rate limit"""
     client_ip = request.remote_addr
-    now = time()
+    now = now_time()
     
     request_times[client_ip] = [
         req_time for req_time in request_times[client_ip]
