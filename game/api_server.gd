@@ -160,6 +160,7 @@ func _send_json(client_id: String, data: Dictionary):
 	response += json
 	
 	client.put_data(response.to_utf8_buffer())
+	client.disconnect_from_host()
 	active_clients.erase(client_id)
 
 func _send_error(client_id: String, code: int, message: String):
@@ -172,4 +173,5 @@ func _send_error(client_id: String, code: int, message: String):
 	response += "\r\n"
 	response += message
 	client.put_data(response.to_utf8_buffer())
+	client.disconnect_from_host()
 	active_clients.erase(client_id)

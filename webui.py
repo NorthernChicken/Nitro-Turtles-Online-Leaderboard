@@ -146,5 +146,13 @@ def api_leaderboard(course, mode):
     except Exception as e:
         return {"error": str(e)}, 500
 
+@app.after_request
+def add_header(response):
+    # Prevent caching of leaderboard data
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '0'
+    return response
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5003)
