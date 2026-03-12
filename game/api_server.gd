@@ -8,6 +8,7 @@ var active_clients: Dictionary = {}
 var handle_to_client: Dictionary = {}
 
 var find_queue: Array = []
+var finding_leaderboard: bool = false
 
 var AVAILABLE_MAPS = [
 	"beach", "bay", "volcano", "pits", "reef", "tide", "ruins", "cliffs", "craters"
@@ -70,6 +71,9 @@ func _process_request(client_id: String):
 	
 	if path.begins_with("/leaderboard/"):
 		var parts = path.split("/")
+		if parts.size() >= 4 and parts[2] == "probe":
+			_fetch_leaderboard(parts[3], client_id)
+			return
 		if parts.size() == 3 or (parts.size() == 4 and parts[3] == ""):
 			var map_name = parts[2]
 			if map_name in AVAILABLE_MAPS:
@@ -106,7 +110,7 @@ func _process_request(client_id: String):
 			# craters on steam is crater
 			if map_name == "craters":
 				leaderboard_id = "crater"
-				
+			
 			if type == "lap":
 				leaderboard_id += "lap"
 			
@@ -118,9 +122,17 @@ func _process_request(client_id: String):
 
 func _fetch_leaderboard(id: String, client_id: String):
 	find_queue.append({"id": id, "client_id": client_id})
-	Steam.findLeaderboard(id)
+	_process_find_queue()
+
+func _process_find_queue():
+	if finding_leaderboard or find_queue.is_empty():
+		return
+	finding_leaderboard = true
+	var req = find_queue[0]
+	Steam.findLeaderboard(req["id"])
 
 func _on_leaderboard_find_result(handle: int, found: int):
+	finding_leaderboard = false
 	if find_queue.is_empty(): return
 	var req = find_queue.pop_front()
 	var client_id = req["client_id"]
@@ -130,6 +142,8 @@ func _on_leaderboard_find_result(handle: int, found: int):
 		Steam.downloadLeaderboardEntries(1, 100, Steam.LEADERBOARD_DATA_REQUEST_GLOBAL, handle)
 	else:
 		_send_error(client_id, 404, "Leaderboard not found: " + req["id"])
+	
+	_process_find_queue()
 
 func _on_leaderboard_scores_downloaded(message: String, handle: int, entries: Array):
 	var client_id = handle_to_client.get(handle)

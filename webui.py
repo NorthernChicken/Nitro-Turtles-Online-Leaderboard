@@ -30,6 +30,8 @@ COURSE_DISPLAY_NAMES = {
 }
 
 def init_db():
+    if os.path.exists('cache.db'):
+        os.remove('cache.db')
     conn = sqlite3.connect('cache.db')
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS leaderboard_cache 
@@ -72,7 +74,7 @@ def fetch_and_cache_all():
             if course_id == 'volcano' and mode == 'lap': continue
             
             try:
-                # Only update if older than 30s
+                # 30s update
                 conn = sqlite3.connect('cache.db')
                 c = conn.cursor()
                 c.execute("SELECT last_updated FROM leaderboard_cache WHERE map=? AND mode=?", (course_id, mode))
@@ -113,16 +115,15 @@ def fetch_and_cache_all():
                 print(f"Background update failed for {course_id}/{mode}: {e}")
 
 def background_worker():
-    time.sleep(5) # Allow everything to start
+    time.sleep(5)
     while True:
         fetch_and_cache_all()
         time.sleep(10)
 
-# Start background thread
+# bg daemon for updating cache
 threading.Thread(target=background_worker, daemon=True).start()
 
 def check_rate_limit():
-    """Check if client has exceeded rate limit"""
     client_ip = request.remote_addr
     now = now_time()
     
@@ -154,7 +155,6 @@ def index():
                              course_display_name=display_name, current_mode=mode,
                              error='The Volcano course does not have a lap leaderboard.', courses=COURSE_DISPLAY_NAMES)
 
-    # Fetch from cache
     processed_entries = []
     try:
         conn = sqlite3.connect('cache.db')
@@ -191,7 +191,6 @@ def api_leaderboard(course, mode):
 
 @app.after_request
 def add_header(response):
-    # Prevent caching of leaderboard data
     response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
     response.headers['Pragma'] = 'no-cache'
     response.headers['Expires'] = '0'
